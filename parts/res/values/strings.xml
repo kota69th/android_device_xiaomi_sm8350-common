@@ -33,5 +33,9 @@
     <!-- Thermal Profiles tile -->
     <string name="thermal_tile_title">Thermal Profiles</string>
 
+    <!--  High Touch Poiling Rate -->
+    <string name="htsr_enable_title">High Touch Polling Rate</string>
+    <string name="htsr_enable_summary">Increases touch polling rate to decrease latency</string>
+    
 </resources>
 

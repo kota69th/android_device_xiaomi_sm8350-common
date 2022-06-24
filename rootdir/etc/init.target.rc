@@ -148,6 +148,10 @@ on init && property:ro.boot.mode=charger
     write /sys/kernel/boot_adsp/boot 1
     wait /sys/class/power_supply/battery
 
+    # Touch Sampling Rate
+    chown system system /sys/devices/virtual/touch/touch_dev/bump_sample_rate
+    chmod 0664 /sys/devices/virtual/touch/touch_dev/bump_sample_rate
+    
 on charger
     start vendor.power_off_alarm
     setprop sys.usb.controller a600000.dwc3
