@@ -121,26 +121,24 @@ function configure_memory_parameters() {
 	# Set allocstall_threshold to 0 for all targets.
 	#
 
+	ProductName=`getprop ro.product.name`
+
 	configure_zram_parameters
 	configure_read_ahead_kb_values
 	echo 100 > /proc/sys/vm/swappiness
-	echo 1 > /proc/sys/vm/watermark_scale_factor
 
-	# add memory limit to camera cgroup
+        # Disable wsf  beacause we are using efk.
+        # wsf Range : 1..1000. So set to bare minimum value 1.
+        echo 1 > /proc/sys/vm/watermark_scale_factor
+	
 	MemTotalStr=`cat /proc/meminfo | grep MemTotal`
 	MemTotal=${MemTotalStr:16:8}
-
-	if [ $MemTotal -gt 8388608 ]; then
-		let LimitSize=838860800
-	else
-		let LimitSize=524288000
-	fi
-
-	echo $LimitSize > /dev/memcg/camera/provider/memory.soft_limit_in_bytes
-	
 	if [ $MemTotal -le 8388608 ]; then
 		echo 0 > /proc/sys/vm/watermark_boost_factor
 	fi
+
+	#Spawn 2 kswapd threads which can help in fast reclaiming of pages
+	echo 2 > /proc/sys/vm/kswapd_threads
 }
 
 rev=`cat /sys/devices/soc0/revision`
@@ -149,6 +147,7 @@ ddr_type4="07"
 ddr_type5="08"
 
 # Core control parameters for gold
+
 echo 2 > /sys/devices/system/cpu/cpu4/core_ctl/min_cpus
 echo 60 > /sys/devices/system/cpu/cpu4/core_ctl/busy_up_thres
 echo 30 > /sys/devices/system/cpu/cpu4/core_ctl/busy_down_thres
@@ -176,19 +175,14 @@ echo 1 > /sys/devices/system/cpu/cpu7/core_ctl/nr_prev_assist_thresh
 echo 0 > /sys/devices/system/cpu/cpu0/core_ctl/enable
 
 # Setting b.L scheduler parameters
-echo 95 95 > /proc/sys/kernel/sched_upmigrate
-echo 85 85 > /proc/sys/kernel/sched_downmigrate
+echo 71 95 > /proc/sys/kernel/sched_upmigrate
+echo 65 85 > /proc/sys/kernel/sched_downmigrate
 echo 100 > /proc/sys/kernel/sched_group_upmigrate
 echo 85 > /proc/sys/kernel/sched_group_downmigrate
 echo 1 > /proc/sys/kernel/sched_walt_rotate_big_tasks
-echo 400000000 > /proc/sys/kernel/sched_coloc_downmigrate_ns
-echo 39000000 39000000 39000000 39000000 39000000 39000000 39000000 5000000 > /proc/sys/kernel/sched_coloc_busy_hyst_cpu_ns
-echo 240 > /proc/sys/kernel/sched_coloc_busy_hysteresis_enable_cpus
-echo 10 10 10 10 10 10 10 95 > /proc/sys/kernel/sched_coloc_busy_hyst_cpu_busy_pct
 
-# set the threshold for low latency task boost feature which prioritize
-# binder activity tasks
-echo 325 > /proc/sys/kernel/walt_low_latency_task_threshold
+
+echo 0 > /proc/sys/kernel/sched_coloc_busy_hysteresis_enable_cpus
 
 # cpuset parameters
 echo 0-2 > /dev/cpuset/background/cpus
@@ -197,6 +191,12 @@ echo " " > /dev/cpuset/foreground/boost/cpus
 echo 0-2,4-7 > /dev/cpuset/foreground/cpus
 echo 0-7 > /dev/cpuset/top-app/cpus
 
+#io limit
+echo 11 > /dev/cpuset/top-app/types
+echo 1 > /dev/cpuset/background/types
+echo 9 > /dev/cpuset/foreground/types
+echo 11 > /proc/sys/kernel/mi_iolimit
+
 # Turn off scheduler boost at the end
 echo 0 > /proc/sys/kernel/sched_boost
 
@@ -204,13 +204,9 @@ echo 0 > /proc/sys/kernel/sched_boost
 echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
 echo 0 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/down_rate_limit_us
 echo 0 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/up_rate_limit_us
-if [ $rev == "1.0" ]; then
-	echo 1190400 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq
-else
-	echo 1209600 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq
-fi
+echo 1171200 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq
 echo 691200 > /sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq
-echo 1 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/pl
+echo 0 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/pl
 
 # configure input boost settings
 if [ $rev == "1.0" ]; then
@@ -220,31 +216,41 @@ else
 fi
 echo 120 > /sys/devices/system/cpu/cpu_boost/input_boost_ms
 
-# configure powerkey boost settings
-echo "0:1804800 1:0 2:0 3:0 4:2419200 5:0 6:0 7:2841600" > /sys/devices/system/cpu/cpu_boost/powerkey_input_boost_freq
+echo "0:1900800 1:0 2:0 3:0 4:2208000 5:0 6:0 7:2400000" > /sys/devices/system/cpu/cpu_boost/powerkey_input_boost_freq
 echo 400 > /sys/devices/system/cpu/cpu_boost/powerkey_input_boost_ms
 
 # configure governor settings for gold cluster
 echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy4/scaling_governor
 echo 0 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/down_rate_limit_us
 echo 0 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/up_rate_limit_us
-if [ $rev == "1.0" ]; then
-	echo 1497600 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq
-else
-	echo 1555200 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq
-fi
-echo 1 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/pl
+echo 1209000 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq
+echo 691200 > /sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq
+echo 85 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_load
+echo -6 > /sys/devices/system/cpu/cpu4/sched_load_boost
+echo -6 > /sys/devices/system/cpu/cpu5/sched_load_boost
+echo -6 > /sys/devices/system/cpu/cpu6/sched_load_boost
+echo 0 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/rtg_boost_freq
+echo 0 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/pl
 
 # configure governor settings for gold+ cluster
 echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy7/scaling_governor
 echo 0 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/down_rate_limit_us
 echo 0 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/up_rate_limit_us
-if [ $rev == "1.0" ]; then
-	echo 1536000 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_freq
-else
-	echo 1670400 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_freq
-fi
-echo 1 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/pl
+echo 1267000 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_freq
+echo 806400 > /sys/devices/system/cpu/cpufreq/policy7/scaling_min_freq
+echo 85 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_load
+echo -6 > /sys/devices/system/cpu/cpu7/sched_load_boost
+echo 0 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/rtg_boost_freq
+echo 0 > /sys/devices/system/cpu/cpufreq/policy7/schedutil/pl
+
+# colocation V3 settings
+echo 691200 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/rtg_boost_freq
+echo 51 > /proc/sys/kernel/sched_min_task_util_for_boost
+echo 35 > /proc/sys/kernel/sched_min_task_util_for_colocation
+echo 20000000 > /proc/sys/kernel/sched_task_unfilter_period
+
+# Enable conservative pl
+echo 1 > /proc/sys/kernel/sched_conservative_pl
 
 # configure bus-dcvs
 for device in /sys/devices/platform/soc
@@ -252,16 +258,15 @@ do
 	for cpubw in $device/*cpu-cpu-llcc-bw/devfreq/*cpu-cpu-llcc-bw
 	do
 		cat $cpubw/available_frequencies | cut -d " " -f 1 > $cpubw/min_freq
-		echo "4577 7110 9155 12298 14236 15258" > $cpubw/bw_hwmon/mbps_zones
+		echo "2288 4577 7110 9155 12298 14236 15258" > $cpubw/bw_hwmon/mbps_zones
 		echo 4 > $cpubw/bw_hwmon/sample_ms
-		echo 80 > $cpubw/bw_hwmon/io_percent
+		echo 68 > $cpubw/bw_hwmon/io_percent
 		echo 20 > $cpubw/bw_hwmon/hist_memory
-		echo 10 > $cpubw/bw_hwmon/hyst_length
-		echo 30 > $cpubw/bw_hwmon/down_thres
+		echo 0 > $cpubw/bw_hwmon/hyst_length
+		echo 80 > $cpubw/bw_hwmon/down_thres
 		echo 0 > $cpubw/bw_hwmon/guard_band_mbps
 		echo 250 > $cpubw/bw_hwmon/up_scale
 		echo 1600 > $cpubw/bw_hwmon/idle_mbps
-		echo 12298 > $cpubw/max_freq
 		echo 40 > $cpubw/polling_interval
 	done
 
@@ -269,20 +274,19 @@ do
 	do
 		cat $llccbw/available_frequencies | cut -d " " -f 1 > $llccbw/min_freq
 		if [ ${ddr_type:4:2} == $ddr_type4 ]; then
-			echo "1720 2086 2929 3879 5931 6515 8136" > $llccbw/bw_hwmon/mbps_zones
+			echo "1144 1720 2086 2929 3879 5931 6515 8136" > $llccbw/bw_hwmon/mbps_zones
 		elif [ ${ddr_type:4:2} == $ddr_type5 ]; then
-			echo "1720 2086 2929 3879 6515 7980 12191" > $llccbw/bw_hwmon/mbps_zones
+			echo "1144 1720 2086 2929 3879 5931 6515 7980 12191" > $llccbw/bw_hwmon/mbps_zones
 		fi
 		echo 4 > $llccbw/bw_hwmon/sample_ms
-		echo 80 > $llccbw/bw_hwmon/io_percent
+		echo 68 > $llccbw/bw_hwmon/io_percent
 		echo 20 > $llccbw/bw_hwmon/hist_memory
-		echo 10 > $llccbw/bw_hwmon/hyst_length
-		echo 30 > $llccbw/bw_hwmon/down_thres
+		echo 0 > $llccbw/bw_hwmon/hyst_length
+		echo 80 > $llccbw/bw_hwmon/down_thres
 		echo 0 > $llccbw/bw_hwmon/guard_band_mbps
 		echo 250 > $llccbw/bw_hwmon/up_scale
 		echo 1600 > $llccbw/bw_hwmon/idle_mbps
-		echo 6515 > $llccbw/max_freq
-		echo 40 > $llccbw/polling_interval
+		echo 48 > $llccbw/polling_interval
 	done
 
 	for l3bw in $device/*snoop-l3-bw/devfreq/*snoop-l3-bw
@@ -308,6 +312,13 @@ do
 		echo 400 > $memlat/mem_latency/ratio_ceil
 	done
 
+	# configure compute settings for silver latfloor
+	for latfloor in $device/*cpu0-cpu*latfloor/devfreq/*cpu0-cpu*latfloor
+	do
+		cat $latfloor/available_frequencies | cut -d " " -f 1 > $latfloor/min_freq
+		echo 8 > $latfloor/polling_interval
+	done
+
 	# configure compute settings for gold latfloor
 	for latfloor in $device/*cpu4-cpu*latfloor/devfreq/*cpu4-cpu*latfloor
 	do
@@ -315,7 +326,7 @@ do
 		echo 8 > $latfloor/polling_interval
 	done
 
-	# configure mem_latency settings for prime latfloor
+        # configure mem_latency settings for prime latfloor
 	for latfloor in $device/*cpu7-cpu*latfloor/devfreq/*cpu7-cpu*latfloor
 	do
 		cat $latfloor/available_frequencies | cut -d " " -f 1 > $latfloor/min_freq
@@ -327,24 +338,32 @@ do
 	for l3gold in $device/*cpu4-cpu-l3-lat/devfreq/*cpu4-cpu-l3-lat
 	do
 		echo 4000 > $l3gold/mem_latency/ratio_ceil
+                echo 25000 > $l3gold/mem_latency/wb_filter_ratio
+                echo 60 > $l3gold/mem_latency/wb_pct_thres
 	done
 
 	# CPU5 L3 ratio ceil
 	for l3gold in $device/*cpu5-cpu-l3-lat/devfreq/*cpu5-cpu-l3-lat
 	do
 		echo 4000 > $l3gold/mem_latency/ratio_ceil
+                echo 25000 > $l3gold/mem_latency/wb_filter_ratio
+                echo 60 > $l3gold/mem_latency/wb_pct_thres
 	done
 
 	# CPU6 L3 ratio ceil
 	for l3gold in $device/*cpu6-cpu-l3-lat/devfreq/*cpu6-cpu-l3-lat
 	do
 		echo 4000 > $l3gold/mem_latency/ratio_ceil
+                echo 25000 > $l3gold/mem_latency/wb_filter_ratio
+                echo 60 > $l3gold/mem_latency/wb_pct_thres
 	done
 
 	# prime L3 ratio ceil
 	for l3prime in $device/*cpu7-cpu-l3-lat/devfreq/*cpu7-cpu-l3-lat
 	do
 	    echo 20000 > $l3prime/mem_latency/ratio_ceil
+            echo 25000 > $l3prime/mem_latency/wb_filter_ratio
+            echo 60 > $l3prime/mem_latency/wb_pct_thres
 	done
 
 	# qoslat ratio ceil
@@ -353,8 +372,10 @@ do
 	    echo 50 > $qoslat/mem_latency/ratio_ceil
 	done
 done
+
+#Enable sleep and set s2idle as default suspend mode
 echo N > /sys/module/lpm_levels/parameters/sleep_disabled
-echo deep > /sys/power/mem_sleep
+echo s2idle > /sys/power/mem_sleep
 
 configure_memory_parameters
 
@@ -375,7 +396,7 @@ if [ -f /sys/devices/soc0/select_image ]; then
 fi
 
 # Change console log level as per console config property
-console_config=`getprop persist.vendor.console.silent.config`
+console_config=`getprop persist.console.silent.config`
 case "$console_config" in
 	"1")
 		echo "Enable console config to $console_config"

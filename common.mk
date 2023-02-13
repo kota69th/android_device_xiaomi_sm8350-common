@@ -32,22 +32,41 @@ PRODUCT_SHIPPING_API_LEVEL := 30
 
 # Audio
 PRODUCT_PACKAGES += \
-    libqcompostprocbundle \
-    libqcomvisualizer \
-    libqcomvoiceprocessing \
-    libvolumelistener
+    android.hardware.audio@6.0-impl \
+    android.hardware.audio.effect@6.0-impl \
+    android.hardware.audio.service \
+    android.hardware.soundtrigger@2.3-impl
+
+PRODUCT_PACKAGES += \
+    audio.primary.lahaina \
+    audio.r_submix.default \
+    audio.usb.default
 
 PRODUCT_PACKAGES += \
     audioadsprpcd \
-    audio.r_submix.default \
-    audio.usb.default \
-    libtinycompress
-
-PRODUCT_PACKAGES += \
-    android.hardware.audio@6.0-impl:32 \
-    android.hardware.audio.effect@6.0-impl:32 \
-    android.hardware.audio.service \
-    android.hardware.soundtrigger@2.3-impl
+    liba2dpoffload \
+    libaudiopreprocessing \
+    libaudio-resampler \
+    libbatterylistener \
+    libbundlewrapper \
+    libcirrusspkrprot \
+    libcomprcapture \
+    libdownmix \
+    libdynproc \
+    libeffectproxy \
+    libexthwplugin \
+    libhdmiedid \
+    libhfp \
+    libldnhncr \
+    libqcompostprocbundle \
+    libqcomvisualizer \
+    libqcomvoiceprocessing \
+    libreverbwrapper \
+    libsndmonitor \
+    libspkrprot \
+    libtinycompress \
+    libvisualizer \
+    libvolumelistener
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/audio/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt
@@ -260,6 +279,10 @@ PRODUCT_PACKAGES += \
     libhidltransport.vendor \
     libhwbinder.vendor
 
+# HotwordEnrollement
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/configs/privapp-permissions-hotword.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/permissions/privapp-permissions-hotword.xml
+
 # Init scripts
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init.batterysecret.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.batterysecret.rc \
@@ -267,10 +290,14 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init.qcom.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.qcom.rc \
     $(LOCAL_PATH)/rootdir/etc/init.qcom.usb.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.qcom.usb.rc \
     $(LOCAL_PATH)/rootdir/etc/init.qti.kernel.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.qti.kernel.rc \
-    $(LOCAL_PATH)/rootdir/etc/init.target.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.target.rc
+    $(LOCAL_PATH)/rootdir/etc/init.target.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.target.rc \
+    $(LOCAL_PATH)/rootdir/etc/init.xiaomi.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.xiaomi.rc
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/bin/init.kernel.post_boot-lahaina.sh:$(TARGET_COPY_OUT_VENDOR)/bin/init.kernel.post_boot-lahaina.sh \
+    $(LOCAL_PATH)/rootdir/bin/init.kernel.post_boot-shima.sh:$(TARGET_COPY_OUT_VENDOR)/bin/init.kernel.post_boot-shima.sh \
+    $(LOCAL_PATH)/rootdir/bin/init.kernel.post_boot-yupik.sh:$(TARGET_COPY_OUT_VENDOR)/bin/init.kernel.post_boot-yupik.sh \
+    $(LOCAL_PATH)/rootdir/bin/init.kernel.post_boot.sh:$(TARGET_COPY_OUT_VENDOR)/bin/init.kernel.post_boot.sh \
     $(LOCAL_PATH)/rootdir/bin/init.qcom.sh:$(TARGET_COPY_OUT_VENDOR)/bin/init.qcom.sh \
     $(LOCAL_PATH)/rootdir/bin/vendor_modprobe.sh:$(TARGET_COPY_OUT_VENDOR)/bin/vendor_modprobe.sh
 
@@ -353,6 +380,7 @@ PRODUCT_COPY_FILES += \
 # Minijail
 PRODUCT_PACKAGES += \
     libavservices_minijail \
+    libavservices_minijail_vendor \
     libavservices_minijail.vendor
 
 # Netd
@@ -540,6 +568,11 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.software.verified_boot.xml:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/permissions/android.software.verified_boot.xml \
     frameworks/native/data/etc/android.software.verified_boot.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.verified_boot.xml
 
+# VNDK
+PRODUCT_PACKAGES += \
+    android.hardware.common-V1-ndk_platform.vendor \
+    android.hardware.graphics.common-V1-ndk_platform.vendor
+
 # Vulkan
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.vulkan.compute-0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.vulkan.compute.xml \
@@ -550,6 +583,7 @@ PRODUCT_COPY_FILES += \
 # WiFi
 PRODUCT_PACKAGES += \
     android.hardware.wifi@1.0-service \
+    android.hardware.wifi.hostapd@1.0.vendor \
     hostapd \
     libwifi-hal-qcom \
     libwpa_client \
